@@ -21,7 +21,7 @@ public class EmailOrchestratorAgent {
     private final LlmEmailGeneratorAgent llmAgent;
 
     public EmailResponse process(EmailTemplateRequest request) {
-        log.info("========================================");
+        log.info("======================================== ");
         log.info("[Orchestrator] New task | Topic: {}", request.getTopic());
         log.info("========================================");
 
