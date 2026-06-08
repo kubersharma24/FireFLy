@@ -233,6 +233,7 @@ public class EmailSenderAgent {
                     <table class="footer-table" cellpadding="0" cellspacing="0">
                         <tr>
                             <td>
+                                <div sclass="footer-name">Warm regards,</div>
                                 <div class="footer-name">%s</div>
                                 <div class="footer-contact">%s</div>
                             </td>
