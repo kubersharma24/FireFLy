@@ -1,5 +1,7 @@
 package com.emailagent.model;
 
+import com.emailagent.validator.ValidMultipartFile;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.Email;
@@ -31,11 +33,10 @@ public class EmailRequestDTO {
 
     @NotBlank(message = "Recipient name is required")
     private String toName;
-    
-    @NotBlank(message = "UUID is required")
+
     private String UUID;
-    
-    @NotBlank(message = "resume is required")
+
+    @ValidMultipartFile(message = "Resume is required")
     private MultipartFile resume;
 
     private MultipartFile coverLetter;

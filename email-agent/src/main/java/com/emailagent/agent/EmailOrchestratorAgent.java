@@ -29,7 +29,7 @@ public class EmailOrchestratorAgent {
             // Step 1: Generate email via LLM
             log.info("[Orchestrator] Step 1 → LLM Agent generating email...");
             GeneratedEmailContent content = llmAgent.generateEmail(request);
-            log.info("[Orchestrator] Step 1 ✅ Email content ready.");
+            log.info("[Orchestrator] Step 1  Email content ready.");
             return EmailResponse.success(
                     "Email generated and sent successfully!",
                     content.getSubject(),
@@ -37,7 +37,7 @@ public class EmailOrchestratorAgent {
             );
 
         } catch (Exception e) {
-            log.error("[Orchestrator] ❌ Task failed: {}", e.getMessage(), e);
+            log.error("[Orchestrator]  Task failed: {}", e.getMessage(), e);
             return EmailResponse.failure(e.getMessage());
         }
     }

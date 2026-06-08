@@ -32,7 +32,8 @@ public class EmailConsumer {
     public void consume(EmailRequest message) {
     	
     	try {
-			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- ",message.getUUID());
+			log.info("{}[Kafka Consmer Agent] Cunsumed Message uuid -- ",message.getUUID());
+			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- ",message);
 			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- To: {} | Subject: '{}'",message.getUUID(), message.getToEmail(), message.getSubject());
 			EmailResponse response = orchestratorAgent.process(message);
 			log.info("{}[Kafka Consmer Agent] Message Response -- To: {} | Subject: '{}'",message.getUUID(), message.getToEmail(), message.getSubject());

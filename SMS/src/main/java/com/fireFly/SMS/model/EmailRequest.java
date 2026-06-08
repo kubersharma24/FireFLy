@@ -38,4 +38,22 @@ public class EmailRequest {
     private String skills;
     private String JobTitle;
     private String headLineSkill;
+
+    @Override
+    public String toString() {
+        return "EmailRequest{" +
+                "toEmail='" + toEmail + '\'' +
+                ", body='" + body + '\'' +
+                ", subject='" + subject + '\'' +
+                ", myNumber='" + myNumber + '\'' +
+                ", myName='" + myName + '\'' +
+                ", toName='" + toName + '\'' +
+                ", UUID='" + UUID + '\'' +
+                ", resume=" + (resume != null) +
+                ", coverLetter=" + (coverLetter != null) +
+                ", skills='" + skills + '\'' +
+                ", JobTitle='" + JobTitle + '\'' +
+                ", headLineSkill='" + headLineSkill + '\'' +
+                '}';
+    }
 }

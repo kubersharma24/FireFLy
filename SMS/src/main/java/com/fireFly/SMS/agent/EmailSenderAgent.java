@@ -153,108 +153,127 @@ public class EmailSenderAgent {
 
     private String formatHtmlBody(EmailRequest content) {
         String bodyHtml = content.getBody()
+                .replace("\\n", "\n")
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("\n", "<br/>");
-
         String skillsSection = buildSkillsSection(content);
-
+        String attachmentButtons = buildAttachmentButtons(content);
         return """
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-                <title>%s</title>
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { background-color: #f4f4f5; font-family: Arial, sans-serif; font-size: 15px; color: #1a1a1a; line-height: 1.7; }
-                    .wrapper { padding: 32px 16px; }
-                    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
-
-                    .header { background: #1a1a2e; padding: 28px 32px 24px; }
-                    .avatar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-                    .avatar { width: 40px; height: 40px; border-radius: 50%%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: #fff; flex-shrink: 0; }
-                    .sender-name { font-size: 14px; font-weight: bold; color: #fff; }
-                    .sender-title { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
-                    .email-subject { font-size: 20px; font-weight: bold; color: #fff; line-height: 1.3; }
-                    .email-tagline { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 6px; }
-
-                    .body { padding: 28px 32px; }
-                    .greeting { font-size: 15px; margin-bottom: 16px; }
-                    .body-text { font-size: 15px; color: #3f3f46; margin-bottom: 16px; }
-
-                    .skills-box { background: #f8f8f9; border-left: 3px solid #1a1a2e; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
-                    .skills-label { font-size: 11px; font-weight: bold; color: #71717a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-                    .skills-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
-                    .skill-pill { font-size: 12px; padding: 4px 12px; background: #fff; border: 1px solid #e4e4e7; border-radius: 999px; color: #3f3f46; }
-
-                    .footer { border-top: 1px solid #e4e4e7; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-                    .footer-name { font-size: 14px; font-weight: bold; color: #1a1a1a; }
-                    .footer-contact { font-size: 13px; color: #71717a; margin-top: 3px; }
-                    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-                    .btn-primary { font-size: 12px; padding: 7px 16px; background: #1a1a2e; color: #fff; border-radius: 7px; font-weight: bold; text-decoration: none; }
-                    .btn-secondary { font-size: 12px; padding: 7px 16px; border: 1px solid #d4d4d8; color: #3f3f46; border-radius: 7px; text-decoration: none; }
-
-                    @media (max-width: 480px) {
-                        .wrapper { padding: 16px 8px; }
-                        .header { padding: 20px; }
-                        .body { padding: 20px; }
-                        .footer { padding: 16px 20px; flex-direction: column; align-items: flex-start; }
-                        .email-subject { font-size: 17px; }
-                    }
-                </style>
-            </head>
-            <body>
-            <div class="wrapper">
-                <div class="card">
-                    <div class="header">
-                        <div class="avatar-row">
-                            <div class="avatar">%s</div>
-                            <div>
-                                <div class="sender-name">%s</div>
-                                <div class="sender-title">%s</div>
-                            </div>
-                        </div>
-                        <div class="email-subject">%s</div>
-                        <div class="email-tagline">%s</div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <title>%s</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { background-color: #f0f0f2; font-family: Arial, sans-serif; font-size: 15px; color: #1a1a1a; line-height: 1.7; }
+                .wrapper { padding: 32px 16px; }
+                .card { max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e4e4e7; }
+                .header { background: #1a1a2e; padding: 28px 36px 26px; }
+                .avatar-row { margin-bottom: 20px; }
+                .avatar-table { border-collapse: collapse; }
+                .avatar-cell { width: 44px; height: 44px; background: rgba(255,255,255,0.15); border-radius: 50%%; text-align: center; vertical-align: middle; font-size: 14px; font-weight: bold; color: #ffffff; padding: 0; }
+                .avatar-info-cell { padding-left: 12px; vertical-align: middle; }
+                .sender-name { font-size: 14px; font-weight: bold; color: #ffffff; }
+                .sender-title { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+                .email-subject { font-size: 22px; font-weight: bold; color: #ffffff; line-height: 1.3; margin-bottom: 8px; }
+                .email-tagline { font-size: 13px; color: rgba(255,255,255,0.6); }
+                .body { padding: 32px 36px; width: 100%%; box-sizing: border-box; }
+                .greeting { font-size: 15px; margin-bottom: 16px; color: #1a1a1a; }
+                .body-text { font-size: 15px; color: #3f3f46; margin-top: 20px; margin-bottom: 0; }
+                .skills-box { background: #f8f8f9; border-left: 3px solid #1a1a2e; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 0 0 8px 0; width: 100%%; box-sizing: border-box; }
+                .skill-pill { font-size: 12px; padding: 5px 14px; background: #ffffff; border: 1px solid #d4d4d8; border-radius: 999px; color: #3f3f46; display: inline-block; white-space: nowrap; flex-shrink: 0; }
+                .skills-label { font-size: 11px; font-weight: bold; color: #71717a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+                .skills-wrap { display: flex; flex-wrap: wrap; gap: 8px; width: 100%%; box-sizing: border-box; }
+                 .footer { border-top: 1px solid #e4e4e7; padding: 20px 36px; }
+                .footer-table { width: 100%%; border-collapse: collapse; }
+                .footer-name { font-size: 14px; font-weight: bold; color: #1a1a1a; }
+                .footer-contact { font-size: 13px; color: #71717a; margin-top: 3px; }
+                .btn-primary { font-size: 12px; padding: 8px 18px; background: #1a1a2e; color: #ffffff !important; border-radius: 7px; font-weight: bold; text-decoration: none; display: inline-block; }
+                .btn-secondary { font-size: 12px; padding: 8px 18px; border: 1px solid #d4d4d8; color: #3f3f46 !important; border-radius: 7px; text-decoration: none; display: inline-block; margin-left: 8px; }
+                @media (max-width: 500px) {
+                    .wrapper { padding: 12px 6px; }
+                    .header { padding: 20px; }
+                    .body { padding: 20px; }
+                    .footer { padding: 16px 20px; }
+                    .email-subject { font-size: 18px; }
+                    .footer-table td { display: block; width: 100%%; }
+                    .footer-table td:last-child { padding-top: 14px; }
+                    .btn-secondary { margin-left: 0; margin-top: 8px; }
+                }
+            </style>
+        </head>
+        <body>
+        <div class="wrapper">
+            <div class="card">
+                <div class="header">
+                    <div class="avatar-row">
+                        <table class="avatar-table" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td class="avatar-cell">%s</td>
+                                <td class="avatar-info-cell">
+                                    <div class="sender-name">%s</div>
+                                    <div class="sender-title">%s</div>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
-                    <div class="body">
-                        <p class="greeting">Dear <strong>%s</strong>,</p>
-                        <div class="body-text">%s</div>
-                        <div class="skills-box">
-                            <div class="skills-label">Core Skills</div>
-                            <div class="skills-wrap">%s</div>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        <div>
-                            <div class="footer-name">%s</div>
-                            <div class="footer-contact">%s</div>
-                        </div>
-                        <div class="btn-group">
-                            <a class="btn-primary" href="#">View Resume</a>
-                            <a class="btn-secondary" href="#">Cover Letter</a>
-                        </div>
-                    </div>
+                    <div class="email-subject">%s</div>
+                    <div class="email-tagline">%s</div>
+                </div>
+                <div class="body">
+                    <p class="greeting">Dear <strong>%s</strong>,</p>
+                    %s
+                    <div class="body-text">%s</div>
+                </div>
+                <div class="footer">
+                    <table class="footer-table" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td>
+                                <div class="footer-name">%s</div>
+                                <div class="footer-contact">%s</div>
+                            </td>
+                            <td style="text-align: right; vertical-align: middle;">
+                                %s
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
-            </body>
-            </html>
-            """.formatted(
-                content.getSubject(),           // <title>
-                getInitials(content.getMyName()), // avatar initials
-                content.getMyName(),             // sender name
-                content.getJobTitle(),
-                content.getSubject(),            // email subject
-                content.getHeadLineSkill(),
-                content.getToName(),             // greeting name
-                bodyHtml,                        // body
-                skillsSection,                          // skill pills
-                content.getMyName(),             // footer name
-                content.getMyNumber()            // footer contact
+        </div>
+        </body>
+        </html>
+        """.formatted(
+                content.getSubject(),                // <title>
+                getInitials(content.getMyName()),     // avatar initials
+                content.getMyName(),                  // sender name
+                content.getJobTitle(),                // sender title
+                content.getSubject(),                 // email subject
+                content.getHeadLineSkill(),           // tagline
+                content.getToName(),                  // greeting name
+                skillsSection,                        // ← BEFORE body text (fixes Gmail collapse)
+                bodyHtml,                             // body text
+                content.getMyName(),                  // footer name
+                content.getMyNumber(),                // footer contact
+                attachmentButtons                     // ← dynamic resume/cover letter buttons
         );
+    }
+
+    private String buildAttachmentButtons(EmailRequest content) {
+        StringBuilder sb = new StringBuilder();
+        boolean hasResume = content.getResume() != null && content.getResume().getFileName() != null;
+        boolean hasCover  = content.getCoverLetter() != null && content.getCoverLetter().getFileName() != null;
+        if (hasResume) {
+            sb.append("<span class=\"btn-primary\">Resume attached ✓</span>");
+        }
+        if (hasCover) {
+            if (hasResume) sb.append("&nbsp;&nbsp;");
+            sb.append("<span class=\"btn-secondary\">Cover letter attached ✓</span>");
+        }
+        return sb.toString();
     }
 
     private String getInitials(String fullName) {
@@ -263,14 +282,30 @@ public class EmailSenderAgent {
         if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
-
     private String buildSkillTags(EmailRequest content) {
-        // Hardcoded for now — you can make this dynamic via EmailRequest later
-        if(content.getSkills() == null){  return null;}
+        if (content.getSkills() == null || content.getSkills().isBlank()) return null;
         String[] skills = content.getSkills().split(",");
         StringBuilder sb = new StringBuilder();
         for (String skill : skills) {
-            sb.append("<span class=\"skill-pill\">").append(skill).append("</span>");
+            String trimmed = skill.trim();
+            if (!trimmed.isEmpty()) {
+                sb.append("<span style=\"")
+                        .append("display:inline-block;")
+                        .append("white-space:nowrap;")
+                        .append("font-size:13px;")
+                        .append("font-family:Arial,sans-serif;")
+                        .append("color:#3f3f46;")
+                        .append("background:#ffffff;")
+                        .append("border:1px solid #d4d4d8;")
+                        .append("border-radius:999px;")
+                        .append("padding:5px 14px;")
+                        .append("margin:0 4px 8px 0;")  // ← bottom margin creates row gap when wrapping
+                        .append("line-height:1.4;")
+                        .append("vertical-align:middle;")
+                        .append("\">")
+                        .append(trimmed)
+                        .append("</span>");
+            }
         }
         return sb.toString();
     }
@@ -278,21 +313,41 @@ public class EmailSenderAgent {
     private String buildSkillsSection(EmailRequest content) {
         String skills = buildSkillTags(content);
         if (skills == null || skills.isBlank()) return "";
-
-        return """
-            <div class="skills-box">
-                <div class="skills-label">Core Skills</div>
-                <div class="skills-wrap">%s</div>
-            </div>
-            """.formatted(skills);
+        return
+                "<div style=\"" +
+                        "width:100%;" +
+                        "box-sizing:border-box;" +
+                        "border-left:3px solid #1a1a2e;" +
+                        "border-radius:0 8px 8px 0;" +
+                        "background:#f8f8f9;" +
+                        "padding:16px 20px 8px 20px;" +  // ← reduced bottom padding since pills have margin-bottom
+                        "margin:0 0 20px 0;" +
+                        "\">" +
+                        "<p style=\"" +
+                        "font-size:11px;" +
+                        "font-weight:bold;" +
+                        "letter-spacing:0.08em;" +
+                        "text-transform:uppercase;" +
+                        "color:#71717a;" +
+                        "margin:0 0 12px 0;" +
+                        "font-family:Arial,sans-serif;" +
+                        "\">Core Skills</p>" +
+                        "<div style=\"" +
+                        "font-size:0;" +      // ← removes inline-block whitespace gaps between pills
+                        "line-height:0;" +
+                        "width:100%;" +
+                        "\">" +
+                        skills +
+                        "</div>" +
+                        "</div>";
     }
-        
+
     private void validateAttachments(EmailRequest request) {
-	
+
 		validateFile(request.getResume(), "Resume");
 		validateFile(request.getCoverLetter(), "Cover letter");
 	}
-    
+
     private void validateFile(FileMessage file, String name) {
 
         if (file == null) {
