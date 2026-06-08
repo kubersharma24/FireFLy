@@ -25,7 +25,6 @@ public class EmailOrchestratorAgent {
         log.info("========================================");
 
         try {
-        	log.info("Change name called");
         	changeName(request);        	
             // Step 1: Send email with attachments
             log.info("{}[Orchestrator] Step 1 -- Sending email with attachments...",request.getUUID() );
@@ -46,9 +45,7 @@ public class EmailOrchestratorAgent {
     
     private void changeName(EmailRequest request){
     	String body = request.getBody();
-    	log.info("{}[changeName] before: {}",request.getUUID() , body);
     	body = body.replace("{{RECIPIENT_NAME}}",request.getToName());
-    	log.info("{}[changeName] after: {}",request.getUUID() , body);
     	request.setBody(body); 
     }
     

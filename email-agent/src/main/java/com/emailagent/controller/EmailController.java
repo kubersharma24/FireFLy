@@ -95,29 +95,30 @@ public class EmailController {
     public ResponseEntity<Object> sendEmail(
             @Valid @ModelAttribute EmailRequestDTO request) {
 
+
         try {
+            for(int i =0 ; i<request.getCount(); i++) {
+                String uuid = UUID.randomUUID().toString();
+                log.info("UUID ----->" + uuid);
+                EmailRequest emailRequest = EmailRequest.builder()
+                        .UUID(uuid)
+                        .toEmail(request.getToEmail())
+                        .body(request.getBody())
+                        .subject(request.getSubject())
+                        .myNumber(request.getMyNumber())
+                        .myName(request.getMyName())
+                        .toName(request.getToName())
+                        .resume(orchestratorAgent.convertToFileMessage(request.getResume()))
+                        .coverLetter(orchestratorAgent.convertToFileMessage(request.getCoverLetter()))
+                        .skills(request.getSkills())
+                        .headLineSkill(request.getHeadLineSkill())
+                        .JobTitle(request.getJobTitle())
+                        .build();
 
-            String uuid = UUID.randomUUID().toString();
-            log.info("UUID ----->" + uuid);
-            EmailRequest emailRequest = EmailRequest.builder()
-                    .UUID(uuid)
-                    .toEmail(request.getToEmail())
-                    .body(request.getBody())
-                    .subject(request.getSubject())
-                    .myNumber(request.getMyNumber())
-                    .myName(request.getMyName())
-                    .toName(request.getToName())
-                    .resume(orchestratorAgent.convertToFileMessage(request.getResume()))
-                    .coverLetter(orchestratorAgent.convertToFileMessage(request.getCoverLetter()))
-                    .skills(request.getSkills())
-                    .headLineSkill(request.getHeadLineSkill())
-                    .JobTitle(request.getJobTitle())
-                    .build();
-
-            log.info("Email request  -----> {}", emailRequest);
-            producer.sendEmailEvent(emailRequest);
+                log.info("Email request  -----> {}", emailRequest);
+                producer.sendEmailEvent(emailRequest);
+            }
             return ResponseEntity.ok("Email queued successfully");
-
         } catch (Exception e) {
             log.error("Error processing request", e);
             return ResponseEntity.internalServerError()

@@ -1,6 +1,7 @@
 package com.fireFly.SMS.consumer;
 
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.fireFly.SMS.agent.EmailOrchestratorAgent;
@@ -34,11 +35,16 @@ public class EmailConsumer {
     	try {
 			log.info("{}[Kafka Consmer Agent] Cunsumed Message uuid -- ",message.getUUID());
 			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- ",message);
-			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- To: {} | Subject: '{}'",message.getUUID(), message.getToEmail(), message.getSubject());
-			EmailResponse response = orchestratorAgent.process(message);
-			log.info("{}[Kafka Consmer Agent] Message Response -- To: {} | Subject: '{}'",message.getUUID(), message.getToEmail(), message.getSubject());
+
+			processAsync(message); // fire and forget — don't block
+//			EmailResponse response = orchestratorAgent.process(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
     }
+
+	@Async("emailTaskExecutor") // dedicated thread pool
+	public void processAsync(EmailRequest message) {
+		orchestratorAgent.process(message);
+	}
 }

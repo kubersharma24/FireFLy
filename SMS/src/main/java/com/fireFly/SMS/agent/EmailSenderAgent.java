@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -34,17 +35,22 @@ public class EmailSenderAgent {
 	private EmailLogService emailLogService;
     private final JavaMailSender mailSender;
 
+    // 1 token per 5 sec = 12/min — safe under Gmail's 20/min
+    private final RateLimiter rateLimiter = RateLimiter.create(0.2);
+
     public void sendEmail(String toEmail, EmailRequest request) {
         log.info("{}[Email Sender Agent] Preparing email → To: {} | Subject: '{}'",request.getUUID(),
                 toEmail, request.getSubject());
-        
-        
+
+        // blocks here until token available — all your 10 threads funnel through safely
+        log.info("{}[Email Sender Agent] Waiting for rate limit token...", request.getUUID());
+        rateLimiter.acquire();
+        log.info("{}[Email Sender Agent] Token acquired — proceeding to send", request.getUUID());
+
         try {
         	validateAttachments(request);
-            log.info("{}[Email Sender Agent] Creating Multipart File: ",request.getUUID());
         	MultipartFile resume = getMultiParAttachement(request, "resume");
         	MultipartFile cover = getMultiParAttachement(request, "cover");
-        	log.info("{}[Email Sender Agent] Multipart Files Created: ",request.getUUID());
         	
         	log.info("{}[Email Sender Agent] Transaction Created: ",request.getUUID());
         	emailLogService.createPendingLog(
@@ -112,31 +118,6 @@ public class EmailSenderAgent {
         helper.addAttachment(fileName, new ByteArrayResource(file.getBytes()));
         log.info("[Email Sender Agent] 📎 Attached: {} ({} bytes)", fileName, file.getSize());
     }
-    
-//    private void attachFile(MimeMessageHelper helper,
-//            File file,
-//            String defaultBaseName)
-//            		 throws MessagingException, IOException {
-//	
-//		if (file == null || !file.exists() || !file.isFile()) {
-//			log.debug("[Email Sender Agent] No valid file provided for: {}", defaultBaseName);
-//			return;
-//		}
-//
-//		String fileName = (file.getName() != null && !file.getName().isBlank()) ? file.getName()
-//				: defaultBaseName + guessExtension(getContentType(file));
-//			helper.addAttachment(fileName, file);
-//			log.info("[Email Sender Agent] 📎 Attached: {} ({} bytes)", fileName, file.length());
-//	}
-    
-//    private String getContentType(File file) {
-//        try {
-//            return Files.probeContentType(file.toPath());
-//        } catch (IOException e) {
-//            log.warn("[Email Sender Agent] Could not detect content type for file: {}", file.getName());
-//            return "application/octet-stream";
-//        }
-//    }
 
     private String guessExtension(String contentType) {
         if (contentType == null) return "";

@@ -37,7 +37,8 @@ public class KafkaConfig {
 	public KafkaTemplate<String, String> stringKafkaTemplate() {
 	    return new KafkaTemplate<>(stringProducerFactory());
 	}
-	
+
+
 	@Bean
 	public ProducerFactory<String, EmailRequest> emailProducerFactory() {
 	    Map<String, Object> config = new HashMap<>();
@@ -53,7 +54,7 @@ public class KafkaConfig {
 	public KafkaTemplate<String, EmailRequest> emailKafkaTemplate() {
 	    return new KafkaTemplate<>(emailProducerFactory());
 	}
-	
+
 	@Bean
 	public ConsumerFactory<String, String> stringConsumerFactory() {
 
@@ -68,7 +69,7 @@ public class KafkaConfig {
 	            new StringDeserializer()
 	    );
 	}
-	
+
 	@Bean
 	public ConsumerFactory<String, EmailRequest> emailConsumerFactory() {
 
@@ -89,7 +90,7 @@ public class KafkaConfig {
 	            deserializer
 	    );
 	}
-	
+
 	@Bean
 	public ConcurrentKafkaListenerContainerFactory<String, String>
 	stringKafkaListenerContainerFactory() {
@@ -110,8 +111,9 @@ public class KafkaConfig {
 	            new ConcurrentKafkaListenerContainerFactory<>();
 
 	    factory.setConsumerFactory(emailConsumerFactory());
+		factory.setConcurrency(10); // 10 threads consuming in parallel
 
-	    return factory;
+		return factory;
 	}
 
 }

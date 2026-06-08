@@ -49,4 +49,6 @@ public class EmailRequestDTO {
 
     @NotBlank(message = "headLineSkill is required - JAVA - AWS - SPRING BOOT - AGENTIC AI")
     private String headLineSkill;
+
+    int count = 1 ;
 }
