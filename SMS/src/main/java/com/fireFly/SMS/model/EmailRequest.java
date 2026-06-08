@@ -33,8 +33,9 @@ public class EmailRequest {
     
     @NotBlank(message = "UUID is required")
     private String UUID;
-        
-    FileMessage resume; 
-    
-    FileMessage coverLetter;
+    private FileMessage resume;
+    private FileMessage coverLetter;
+    private String skills;
+    private String JobTitle;
+    private String headLineSkill;
 }

@@ -35,5 +35,8 @@ public class EmailRequest {
     
     FileMessage resume; 
     
-    FileMessage coverLetter; 
+    FileMessage coverLetter;
+    private String skills;
+    private String JobTitle;
+    private String headLineSkill;
 }

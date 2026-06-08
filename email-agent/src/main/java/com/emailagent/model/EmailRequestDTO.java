@@ -39,4 +39,13 @@ public class EmailRequestDTO {
     private MultipartFile resume;
 
     private MultipartFile coverLetter;
+
+    @NotBlank(message = "skills is required to add skills section - Java, AWS, ")
+    private String skills;
+
+    @NotBlank(message = "jobTitle is required ex - Junior Java Developer")
+    private String JobTitle;
+
+    @NotBlank(message = "headLineSkill is required - JAVA - AWS - SPRING BOOT - AGENTIC AI")
+    private String headLineSkill;
 }
