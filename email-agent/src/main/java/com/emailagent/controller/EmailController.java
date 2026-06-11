@@ -6,6 +6,7 @@ import com.emailagent.model.EmailRequest;
 import com.emailagent.model.EmailRequestDTO;
 import com.emailagent.model.EmailResponse;
 import com.emailagent.model.EmailTemplateRequest;
+import com.emailagent.service.FileStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class EmailController {
 
     private final EmailOrchestratorAgent orchestratorAgent;
     private final EmailProducer producer;
+    private final FileStorageService fileStorageService;
 
     private final RestTemplate rest = new RestTemplate();
 
@@ -97,7 +99,17 @@ public class EmailController {
 
 
         try {
-            for(int i =0 ; i<request.getCount(); i++) {
+            // Step 1: Save files to CVCL directory, get back their paths
+            log.info("[Controller] Saving resume to CVCL...");
+            String resumePath = fileStorageService.save(request.getResume());
+            log.info("[Controller] Resume saved → {}", resumePath);
+
+            String coverLetterPath = null;
+            log.info("[Controller] Saving cover letter to CVCL...");
+            coverLetterPath = fileStorageService.save(request.getCoverLetter());
+            log.info("[Controller] Cover letter saved → {}", coverLetterPath);
+
+            for(int i = 0 ; i<request.getCount(); i++) {
                 String uuid = UUID.randomUUID().toString();
                 log.info("UUID ----->" + uuid);
                 EmailRequest emailRequest = EmailRequest.builder()
@@ -108,8 +120,8 @@ public class EmailController {
                         .myNumber(request.getMyNumber())
                         .myName(request.getMyName())
                         .toName(request.getToName())
-                        .resume(orchestratorAgent.convertToFileMessage(request.getResume()))
-                        .coverLetter(orchestratorAgent.convertToFileMessage(request.getCoverLetter()))
+                        .resumePath(resumePath)
+                        .coverLetterPath(coverLetterPath)
                         .skills(request.getSkills())
                         .headLineSkill(request.getHeadLineSkill())
                         .JobTitle(request.getJobTitle())

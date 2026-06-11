@@ -1,6 +1,8 @@
 package com.fireFly.SMS.consumer;
 
+import com.fireFly.SMS.service.EmailProcessorService;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,9 @@ public class EmailConsumer {
 	
 	private final EmailOrchestratorAgent orchestratorAgent;
 
+	private final EmailProcessorService processorService;
+
+
 	@KafkaListener(
 	        topics = "health",
 	        containerFactory = "stringKafkaListenerContainerFactory"
@@ -25,26 +30,25 @@ public class EmailConsumer {
     public void consumerHb(String message) {
         System.out.println("HB : " + message);
     }
-    
-    @KafkaListener(
-            topics = "email",
-            containerFactory = "emailKafkaListenerContainerFactory"
-    )
-    public void consume(EmailRequest message) {
-    	
-    	try {
-			log.info("{}[Kafka Consmer Agent] Cunsumed Message uuid -- ",message.getUUID());
-			log.info("{}[Kafka Consmer Agent] Cunsumed Message -- ",message);
 
-			processAsync(message); // fire and forget — don't block
-//			EmailResponse response = orchestratorAgent.process(message);
+	@KafkaListener(
+			topics = "email",
+			containerFactory = "emailKafkaListenerContainerFactory"
+	)
+	public void consume(EmailRequest message, Acknowledgment ack) {
+		try {
+			log.info("{}[Kafka Consumer Agent] Consumed Message uuid -- ", message.getUUID());
+			log.info("{}[Kafka Consumer Agent] Consumed Message -- ", message);
+
+			// ACK immediately — tells Kafka "I received this, don't redeliver"
+			ack.acknowledge();
+
+			// Then process async — fire and forget
+			processorService.processAsync(message);
+
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.error("{}[Kafka Consumer Agent] Error acknowledging message", message.getUUID(), e);
+			ack.acknowledge(); // still ack to avoid infinite retry loop
 		}
-    }
-
-	@Async("emailTaskExecutor") // dedicated thread pool
-	public void processAsync(EmailRequest message) {
-		orchestratorAgent.process(message);
 	}
 }

@@ -15,6 +15,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -63,6 +64,7 @@ public class KafkaConfig {
 	    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 	    props.put(ConsumerConfig.GROUP_ID_CONFIG, "health-group");
 
+
 	    return new DefaultKafkaConsumerFactory<>(
 	            props,
 	            new StringDeserializer(),
@@ -77,8 +79,14 @@ public class KafkaConfig {
 
 	    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 	    props.put(ConsumerConfig.GROUP_ID_CONFIG, "email-group");
+		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);         // ADD: disable auto commit
+		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");       // ADD: don't replay old messages on restart
 
-	    JsonDeserializer<EmailRequest> deserializer =
+		// ADD THESE TWO:
+		props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 600000); // 10 minutes
+		props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
+
+		JsonDeserializer<EmailRequest> deserializer =
 	            new JsonDeserializer<>(EmailRequest.class);
 
 	    deserializer.addTrustedPackages("*");
@@ -112,6 +120,9 @@ public class KafkaConfig {
 
 	    factory.setConsumerFactory(emailConsumerFactory());
 		factory.setConcurrency(10); // 10 threads consuming in parallel
+		factory.getContainerProperties().setAckMode(
+				ContainerProperties.AckMode.MANUAL_IMMEDIATE              // ADD: manual ack
+		);
 
 		return factory;
 	}

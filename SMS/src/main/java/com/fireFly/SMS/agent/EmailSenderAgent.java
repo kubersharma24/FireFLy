@@ -36,9 +36,19 @@ public class EmailSenderAgent {
     private final JavaMailSender mailSender;
 
     // 1 token per 5 sec = 12/min — safe under Gmail's 20/min
-    private final RateLimiter rateLimiter = RateLimiter.create(0.2);
+    private final RateLimiter rateLimiter = RateLimiter.create(0.1);
+
+    // Circuit breaker flag
+    private volatile boolean gmailBlocked = false;
 
     public void sendEmail(String toEmail, EmailRequest request) {
+
+        if (gmailBlocked) {
+            log.warn("{}[Email Sender Agent] ⛔ Gmail is blocked — skipping send to {}",
+                    request.getUUID(), toEmail);
+            emailLogService.markFailed(request.getUUID(), "Gmail daily limit exceeded");
+            return;
+        }
         log.info("{}[Email Sender Agent] Preparing email → To: {} | Subject: '{}'",request.getUUID(),
                 toEmail, request.getSubject());
 
@@ -48,10 +58,27 @@ public class EmailSenderAgent {
         log.info("{}[Email Sender Agent] Token acquired — proceeding to send", request.getUUID());
 
         try {
-        	validateAttachments(request);
-        	MultipartFile resume = getMultiParAttachement(request, "resume");
-        	MultipartFile cover = getMultiParAttachement(request, "cover");
-        	
+
+            File resumeFile = null;
+            // Read resume from path
+            if (request.getResumePath() != null) {
+                 resumeFile = new File(request.getResumePath());
+            }
+
+            File coverFile = null;
+            // Read cover letter from path
+            if (request.getCoverLetterPath() != null) {
+                coverFile = new File(request.getCoverLetterPath());
+
+            }
+//        	validateAttachments(request);
+//        	MultipartFile resume = getMultiParAttachement(request, "resume");
+//        	MultipartFile cover = getMultiParAttachement(request, "cover");
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            // multipart=true is required for both HTML body and attachments
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
         	log.info("{}[Email Sender Agent] Transaction Created: ",request.getUUID());
         	emailLogService.createPendingLog(
                     toEmail,
@@ -59,65 +86,91 @@ public class EmailSenderAgent {
                     request.getSubject(),
                     request
             );
-        	
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            // multipart=true is required for both HTML body and attachments
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
             helper.setTo(toEmail);
             helper.setSubject(request.getSubject());
             helper.setText(formatHtmlBody(request), true);
             // Attach resume if provided
-            attachFile(helper, resume, request.getResume().getFileName());
+            attachFile(helper, resumeFile, "Resume");
 
             // Attach cover letter if provided
-            attachFile(helper, cover, request.getCoverLetter().getFileName());
+            attachFile(helper, coverFile, "CoverLetter");
             
-            mailSender.send(mimeMessage);      
+            mailSender.send(mimeMessage);
             emailLogService.markSuccess(request.getUUID());
             log.info("{}[Email Sender Agent]  Email sent to: {}",request.getUUID(), toEmail);
 
-        } catch (MessagingException | IOException e) {
+        } catch (Exception e) {
+            // Detect Gmail block specifically
+            if (e.getMessage() != null && e.getMessage().contains("550-5.4.5")) {
+                gmailBlocked = true;    // ← flip circuit breaker
+                log.error("{}[Email Sender Agent] 🚨 GMAIL DAILY LIMIT REACHED — stopping all sends. Restart tomorrow.",
+                        request.getUUID());
+            }
             log.error("{}[Email Sender Agent] Failed to send email",request.getUUID(), e);
             emailLogService.markFailed(request.getUUID(), e.getMessage());
             throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
     
-    private MultipartFile getMultiParAttachement (EmailRequest request, String value) {
-    	FileMessage fileMessage = null;
-    	if(value.equalsIgnoreCase("resume")) {
-    		fileMessage = request.getResume();
-    	} else if (value.equalsIgnoreCase("cover")) {
-    		fileMessage = request.getCoverLetter();
-    	}
-    	MultipartFile multipartFile =
-    		    new MockMultipartFile(
-    		        fileMessage.getFileName(),
-    		        fileMessage.getOriginalFileName(),
-    		        fileMessage.getContentType(),
-    		        fileMessage.getData()
-    		    );
-    	return multipartFile;
+//    private MultipartFile getMultiParAttachement (EmailRequest request, String value) {
+//    	FileMessage fileMessage = null;
+//    	if(value.equalsIgnoreCase("resume")) {
+//    		fileMessage = request.getResume();
+//    	} else if (value.equalsIgnoreCase("cover")) {
+//    		fileMessage = request.getCoverLetter();
+//    	}
+//    	MultipartFile multipartFile =
+//    		    new MockMultipartFile(
+//    		        fileMessage.getFileName(),
+//    		        fileMessage.getOriginalFileName(),
+//    		        fileMessage.getContentType(),
+//    		        fileMessage.getData()
+//    		    );
+//    	return multipartFile;
+//    }
+
+    private void attachFile(MimeMessageHelper helper,
+            File file,
+            String defaultBaseName)
+            		 throws MessagingException, IOException {
+
+		if (file == null || !file.exists() || !file.isFile()) {
+			log.debug("[Email Sender Agent] No valid file provided for: {}", defaultBaseName);
+			return;
+		}
+
+		String fileName = (file.getName() != null && !file.getName().isBlank()) ? file.getName()
+				: defaultBaseName + guessExtension(getContentType(file));
+			helper.addAttachment(fileName, file);
+			log.info("[Email Sender Agent] 📎 Attached: {} ({} bytes)", fileName, file.length());
+	}
+
+        private String getContentType(File file) {
+        try {
+            return Files.probeContentType(file.toPath());
+        } catch (IOException e) {
+            log.warn("[Email Sender Agent] Could not detect content type for file: {}", file.getName());
+            return "application/octet-stream";
+        }
     }
 
     // ─── Attachment Helper ────────────────────────────────────────────────────
 
-    private void attachFile(MimeMessageHelper helper, MultipartFile file, String defaultBaseName)
-            throws MessagingException, IOException {
-
-        if (file == null || file.isEmpty()) {
-            log.debug("[Email Sender Agent] No file provided for: {}", defaultBaseName);
-            return;
-        }
-
-        String fileName = (file.getOriginalFilename() != null && !file.getOriginalFilename().isBlank())
-                ? file.getOriginalFilename()
-                : defaultBaseName + guessExtension(file.getContentType());
-
-        helper.addAttachment(fileName, new ByteArrayResource(file.getBytes()));
-        log.info("[Email Sender Agent] 📎 Attached: {} ({} bytes)", fileName, file.getSize());
-    }
+//    private void attachFile(MimeMessageHelper helper, MultipartFile file, String defaultBaseName)
+//            throws MessagingException, IOException {
+//
+//        if (file == null || file.isEmpty()) {
+//            log.debug("[Email Sender Agent] No file provided for: {}", defaultBaseName);
+//            return;
+//        }
+//
+//        String fileName = (file.getOriginalFilename() != null && !file.getOriginalFilename().isBlank())
+//                ? file.getOriginalFilename()
+//                : defaultBaseName + guessExtension(file.getContentType());
+//
+//        helper.addAttachment(fileName, new ByteArrayResource(file.getBytes()));
+//        log.info("[Email Sender Agent] 📎 Attached: {} ({} bytes)", fileName, file.getSize());
+//    }
 
     private String guessExtension(String contentType) {
         if (contentType == null) return "";
@@ -246,8 +299,8 @@ public class EmailSenderAgent {
 
     private String buildAttachmentButtons(EmailRequest content) {
         StringBuilder sb = new StringBuilder();
-        boolean hasResume = content.getResume() != null && content.getResume().getFileName() != null;
-        boolean hasCover  = content.getCoverLetter() != null && content.getCoverLetter().getFileName() != null;
+        boolean hasResume = true;
+        boolean hasCover  = true;
         if (hasResume) {
             sb.append("<span class=\"btn-primary\">Resume attached ✓</span>");
         }
@@ -324,25 +377,25 @@ public class EmailSenderAgent {
                         "</div>";
     }
 
-    private void validateAttachments(EmailRequest request) {
+//    private void validateAttachments(EmailRequest request) {
+//
+//		validateFile(request.getResume(), "Resume");
+//		validateFile(request.getCoverLetter(), "Cover letter");
+//	}
 
-		validateFile(request.getResume(), "Resume");
-		validateFile(request.getCoverLetter(), "Cover letter");
-	}
-
-    private void validateFile(FileMessage file, String name) {
-
-        if (file == null) {
-            throw new MissingAttachmentException(name + " is missing");
-        }
-
-        if (file.getData() == null || file.getData().length == 0) {
-            throw new MissingAttachmentException(name + " content is empty");
-        }
-
-        if (file.getOriginalFileName() == null
-                || file.getOriginalFileName().isBlank()) {
-            throw new MissingAttachmentException(name + " filename is missing");
-        }
-    }
+//    private void validateFile(FileMessage file, String name) {
+//
+//        if (file == null) {
+//            throw new MissingAttachmentException(name + " is missing");
+//        }
+//
+//        if (file.getData() == null || file.getData().length == 0) {
+//            throw new MissingAttachmentException(name + " content is empty");
+//        }
+//
+//        if (file.getOriginalFileName() == null
+//                || file.getOriginalFileName().isBlank()) {
+//            throw new MissingAttachmentException(name + " filename is missing");
+//        }
+//    }
 }

@@ -33,8 +33,8 @@ public class EmailRequest {
     
     @NotBlank(message = "UUID is required")
     private String UUID;
-    private FileMessage resume;
-    private FileMessage coverLetter;
+    private String  resumePath;
+    private String  coverLetterPath;
     private String skills;
     private String JobTitle;
     private String headLineSkill;
@@ -49,8 +49,8 @@ public class EmailRequest {
                 ", myName='" + myName + '\'' +
                 ", toName='" + toName + '\'' +
                 ", UUID='" + UUID + '\'' +
-                ", resume=" + (resume != null) +
-                ", coverLetter=" + (coverLetter != null) +
+                ", resume=" + resumePath +
+                ", coverLetter=" + coverLetterPath +
                 ", skills='" + skills + '\'' +
                 ", JobTitle='" + JobTitle + '\'' +
                 ", headLineSkill='" + headLineSkill + '\'' +

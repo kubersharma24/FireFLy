@@ -1,24 +1,18 @@
 package com.emailagent.model;
 
 import com.emailagent.validator.ValidMultipartFile;
-import jakarta.validation.constraints.NotNull;
-import org.springframework.web.multipart.MultipartFile;
-
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmailRequestDTO {
-	@Email(message = "Invalid email address")
-    @NotBlank(message = "Recipient email is required")
-    private String toEmail;
+public class BulkEmailRequestDTO {
 
     @NotBlank(message = "Body is required")
     private String body;
@@ -30,9 +24,6 @@ public class EmailRequestDTO {
 
     @NotBlank(message = "Sender name is required")
     private String myName;
-
-    @NotBlank(message = "Recipient name is required")
-    private String toName;
 
     private String UUID;
 
@@ -50,5 +41,5 @@ public class EmailRequestDTO {
     @NotBlank(message = "headLineSkill is required - JAVA - AWS - SPRING BOOT - AGENTIC AI")
     private String headLineSkill;
 
-    int count = 1;
+    int pageNo = 0;
 }
